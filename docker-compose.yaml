@@ -1,0 +1,147 @@
+# Rivaro for Developers — Local Deployment
+# Install: curl -fsSL https://get.rivaro.ai/dev | bash
+# Dashboard: http://localhost:3000
+# Proxy: http://localhost:8080
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: rivaro-dev-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rivarodevroot}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-quickstartdb}
+      MYSQL_USER: ${MYSQL_USER:-aiplatform}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-rivarodevpass}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --max_connections=200
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rivarodevroot}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - dev-network
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rivaro-dev-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-rivaro}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-rivarodevmq}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - dev-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: rivaro-dev-redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dev-network
+
+  backend:
+    image: ghcr.io/rivaro-ai/rivaro-backend:${RIVARO_VERSION:-latest}
+    container_name: rivaro-dev-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-quickstartdb}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-aiplatform}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-rivarodevpass}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-rivaro}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-rivarodevmq}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SECRETS_MASTER_KEY: ${SECRETS_MASTER_KEY:-rivaro-dev-local-key-change-in-prod}
+      JWT_SECRET: ${JWT_SECRET:-rivaro-dev-local-jwt-change-in-prod}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AWS_BEDROCK_ENABLED: ${AWS_BEDROCK_ENABLED:-false}
+      SERVER_PORT: 8080
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-developer}
+      LOCAL_MODE: "true"
+    ports:
+      - '127.0.0.1:8080:8080'
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    networks:
+      - dev-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+
+  frontend:
+    image: ghcr.io/rivaro-ai/rivaro-frontend:${RIVARO_VERSION:-latest}
+    container_name: rivaro-dev-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NEXT_PUBLIC_AGENT_SERVER_URL: ""
+      NEXT_PUBLIC_LANGCHAIN_AGENT_URL: ""
+      NEXT_PUBLIC_CREWAI_AGENT_URL: ""
+      NEXT_PUBLIC_LOCAL_MODE: "true"
+      NEXT_PUBLIC_DEVELOPER_MODE: "true"
+      NEXT_PUBLIC_SIGNUP_URL: https://app.rivaro.ai/trial-signup
+      NODE_ENV: production
+    ports:
+      - '127.0.0.1:3000:3000'
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - dev-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+volumes:
+  mysql_data:
+  rabbitmq_data:
+
+networks:
+  dev-network:
+    driver: bridge
