@@ -47,7 +47,6 @@ shasum -a 256 ~/.rivaro/rivaro-backend.jar
 | Path | Purpose |
 |---|---|
 | `~/.rivaro/docker-compose.yaml` | Compose definition for the local stack |
-| `~/.rivaro/docker-compose.obfuscated.yaml` | Override that runs the obfuscated JAR |
 | `~/.rivaro/rivaro-backend.jar` | Obfuscated Rivaro backend (signed release artifact) |
 | `~/.rivaro/.env` | Optional provider keys (only created if you pass `OPENAI_API_KEY` etc.) |
 | Docker containers | `rivaro-backend`, `rivaro-frontend`, `rivaro-mysql`, `rivaro-rabbitmq`, `rivaro-redis` |

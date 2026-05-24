@@ -60,9 +60,13 @@ services:
       - rivaro-network
 
   backend:
-    image: ghcr.io/rivaro-ai/rivaro-backend:${RIVARO_VERSION:-latest}
+    image: eclipse-temurin:17-jre
     container_name: rivaro-backend
     restart: unless-stopped
+    working_dir: /app
+    command: ["java", "-jar", "/app/rivaro-backend.jar"]
+    volumes:
+      - ./rivaro-backend.jar:/app/rivaro-backend.jar:ro
     depends_on:
       mysql:
         condition: service_healthy
