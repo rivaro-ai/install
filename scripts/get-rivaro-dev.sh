@@ -24,7 +24,7 @@ set -e
 # ============================================================
 
 RIVARO_DEV_DIR="${RIVARO_DEV_DIR:-$HOME/.rivaro/developer}"
-RIVARO_BACKEND_MODE="${RIVARO_BACKEND_MODE:-image}"
+RIVARO_BACKEND_MODE="${RIVARO_BACKEND_MODE:-obfuscated}"
 RIVARO_BACKEND_JAR_URL="${RIVARO_BACKEND_JAR_URL:-https://github.com/rivaro-ai/ai-compliance/releases/latest/download/rivaro-backend.jar}"
 GITHUB_RAW="https://raw.githubusercontent.com/rivaro-ai/developer/main"
 
