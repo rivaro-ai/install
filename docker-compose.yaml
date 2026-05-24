@@ -1,4 +1,4 @@
-# Rivaro for Developers — Local Deployment
+# Rivaro — Local Install
 # Install: curl -fsSL https://get.rivaro.ai | bash
 # Dashboard: http://localhost:3000
 # Proxy: http://localhost:8080
@@ -6,7 +6,7 @@
 services:
   mysql:
     image: mysql:8.0
-    container_name: rivaro-dev-mysql
+    container_name: rivaro-mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rivarodevroot}
@@ -27,11 +27,11 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - dev-network
+      - rivaro-network
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
-    container_name: rivaro-dev-rabbitmq
+    container_name: rivaro-rabbitmq
     restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-rivaro}
@@ -45,11 +45,11 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - dev-network
+      - rivaro-network
 
   redis:
     image: redis:7-alpine
-    container_name: rivaro-dev-redis
+    container_name: rivaro-redis
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -57,11 +57,11 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - dev-network
+      - rivaro-network
 
   backend:
     image: ghcr.io/rivaro-ai/rivaro-backend:${RIVARO_VERSION:-latest}
-    container_name: rivaro-dev-backend
+    container_name: rivaro-backend
     restart: unless-stopped
     depends_on:
       mysql:
@@ -98,7 +98,7 @@ services:
       retries: 3
       start_period: 120s
     networks:
-      - dev-network
+      - rivaro-network
     deploy:
       resources:
         limits:
@@ -108,7 +108,7 @@ services:
 
   frontend:
     image: ghcr.io/rivaro-ai/rivaro-frontend:${RIVARO_VERSION:-latest}
-    container_name: rivaro-dev-frontend
+    container_name: rivaro-frontend
     restart: unless-stopped
     depends_on:
       backend:
@@ -131,7 +131,7 @@ services:
       retries: 3
       start_period: 30s
     networks:
-      - dev-network
+      - rivaro-network
     deploy:
       resources:
         limits:
@@ -144,5 +144,5 @@ volumes:
   rabbitmq_data:
 
 networks:
-  dev-network:
+  rivaro-network:
     driver: bridge

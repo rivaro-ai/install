@@ -2,31 +2,32 @@
 set -e
 
 # ============================================================
-# Rivaro for Developers - One-Line Installer
+# Rivaro - Local Install
 # ============================================================
 # Usage:
 #   curl -fsSL https://get.rivaro.ai | bash
 #
 # What this does:
 #   1. Checks for Docker + Docker Compose
-#   2. Downloads the developer docker-compose.yaml
+#   2. Downloads the docker-compose.yaml
 #   3. Runs docker compose up -d
 #   4. Waits for the backend to be healthy
 #   5. Runs a test detection
 #   6. Opens the dashboard
 #
 # Options (via environment variables):
-#   RIVARO_DEV_DIR     Install directory (default: ~/.rivaro/developer)
-#   RIVARO_BACKEND_MODE image (default) or obfuscated
+#   RIVARO_HOME            Install directory (default: ~/.rivaro)
+#   RIVARO_BACKEND_MODE    obfuscated (default) or image
 #   RIVARO_BACKEND_JAR_URL URL used when backend mode is obfuscated
-#   OPENAI_API_KEY     Pre-configure your OpenAI key (optional)
-#   ANTHROPIC_API_KEY  Pre-configure your Anthropic key (optional)
+#   OPENAI_API_KEY         Pre-configure your OpenAI key (optional)
+#   ANTHROPIC_API_KEY      Pre-configure your Anthropic key (optional)
 # ============================================================
 
-RIVARO_DEV_DIR="${RIVARO_DEV_DIR:-$HOME/.rivaro/developer}"
+# RIVARO_DEV_DIR is the previous name for RIVARO_HOME, kept for backward compat.
+RIVARO_HOME="${RIVARO_HOME:-${RIVARO_DEV_DIR:-$HOME/.rivaro}}"
 RIVARO_BACKEND_MODE="${RIVARO_BACKEND_MODE:-obfuscated}"
-RIVARO_BACKEND_JAR_URL="${RIVARO_BACKEND_JAR_URL:-https://github.com/rivaro-ai/ai-compliance/releases/latest/download/rivaro-backend.jar}"
-GITHUB_RAW="https://raw.githubusercontent.com/rivaro-ai/developer/main"
+RIVARO_BACKEND_JAR_URL="${RIVARO_BACKEND_JAR_URL:-https://github.com/rivaro-ai/install/releases/latest/download/rivaro-backend.jar}"
+GITHUB_RAW="https://raw.githubusercontent.com/rivaro-ai/install/main"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -42,7 +43,7 @@ warn()  { echo -e "${YELLOW}[WARN]${NC}  $1"; }
 fail()  { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 
 echo ""
-echo -e "${BOLD}Rivaro for Developers${NC}"
+echo -e "${BOLD}Rivaro${NC} ${DIM}- local install${NC}"
 echo -e "${DIM}Runtime governance for AI agents${NC}"
 echo ""
 
@@ -71,11 +72,11 @@ echo ""
 
 # ── Download ─────────────────────────────────────────────────
 
-mkdir -p "$RIVARO_DEV_DIR"
+mkdir -p "$RIVARO_HOME"
 
-info "Downloading to ${RIVARO_DEV_DIR}"
+info "Downloading to ${RIVARO_HOME}"
 
-if ! curl -fsSL "${GITHUB_RAW}/docker-compose.yaml" -o "${RIVARO_DEV_DIR}/docker-compose.yaml"; then
+if ! curl -fsSL "${GITHUB_RAW}/docker-compose.yaml" -o "${RIVARO_HOME}/docker-compose.yaml"; then
     fail "Failed to download docker-compose.yaml. Check your internet connection."
 fi
 ok "docker-compose.yaml"
@@ -83,27 +84,27 @@ ok "docker-compose.yaml"
 COMPOSE_FILES=(-f docker-compose.yaml)
 if [ "$RIVARO_BACKEND_MODE" = "obfuscated" ]; then
     info "Downloading obfuscated backend JAR"
-    if ! curl -fsSL "${RIVARO_BACKEND_JAR_URL}" -o "${RIVARO_DEV_DIR}/rivaro-backend.jar"; then
+    if ! curl -fsSL "${RIVARO_BACKEND_JAR_URL}" -o "${RIVARO_HOME}/rivaro-backend.jar"; then
         fail "Failed to download obfuscated backend JAR from ${RIVARO_BACKEND_JAR_URL}"
     fi
 
     if command -v jar >/dev/null 2>&1; then
-        if ! jar tf "${RIVARO_DEV_DIR}/rivaro-backend.jar" >/dev/null 2>&1; then
+        if ! jar tf "${RIVARO_HOME}/rivaro-backend.jar" >/dev/null 2>&1; then
             fail "Downloaded JAR is invalid (jar tf check failed)."
         fi
     elif command -v unzip >/dev/null 2>&1; then
-        if ! unzip -tq "${RIVARO_DEV_DIR}/rivaro-backend.jar" >/dev/null 2>&1; then
+        if ! unzip -tq "${RIVARO_HOME}/rivaro-backend.jar" >/dev/null 2>&1; then
             fail "Downloaded JAR is invalid (unzip -t check failed)."
         fi
     else
         warn "Skipping JAR integrity check (install 'jar' or 'unzip' for verification)."
     fi
 
-    cat > "${RIVARO_DEV_DIR}/docker-compose.obfuscated.yaml" <<'EOF'
+    cat > "${RIVARO_HOME}/docker-compose.obfuscated.yaml" <<'EOF'
 services:
   backend:
     image: eclipse-temurin:17-jre
-    container_name: rivaro-dev-backend
+    container_name: rivaro-backend
     working_dir: /app
     command: ["java", "-jar", "/app/rivaro-backend.jar"]
     volumes:
@@ -127,7 +128,7 @@ fi
 
 # ── Write .env if provider keys are set ──────────────────────
 
-ENV_FILE="${RIVARO_DEV_DIR}/.env"
+ENV_FILE="${RIVARO_HOME}/.env"
 if [ -n "$OPENAI_API_KEY" ] || [ -n "$ANTHROPIC_API_KEY" ]; then
     {
         [ -n "$OPENAI_API_KEY" ] && echo "OPENAI_API_KEY=${OPENAI_API_KEY}"
@@ -143,7 +144,7 @@ echo ""
 info "Starting Rivaro (this takes ~60 seconds on first run)..."
 echo ""
 
-cd "$RIVARO_DEV_DIR"
+cd "$RIVARO_HOME"
 docker compose "${COMPOSE_FILES[@]}" pull --quiet 2>/dev/null || true
 docker compose "${COMPOSE_FILES[@]}" up -d
 
@@ -164,7 +165,7 @@ while [ $WAITED -lt $MAX_WAIT ]; do
 done
 
 if [ $WAITED -ge $MAX_WAIT ]; then
-    warn "Backend is still starting. Check logs with: docker compose -f ${RIVARO_DEV_DIR}/docker-compose.yaml logs backend"
+    warn "Backend is still starting. Check logs with: docker compose -f ${RIVARO_HOME}/docker-compose.yaml logs backend"
     echo ""
     echo -e "  Once it's ready, open: ${BOLD}http://localhost:3000${NC}"
     exit 0
@@ -211,13 +212,13 @@ echo -e "  ${DIM}Docs: https://docs.rivaro.ai/developer-quickstart${NC}"
 echo ""
 echo -e "  ${DIM}Manage:${NC}"
 if [ "$RIVARO_BACKEND_MODE" = "obfuscated" ]; then
-    echo -e "    ${DIM}cd ${RIVARO_DEV_DIR} && docker compose -f docker-compose.yaml -f docker-compose.obfuscated.yaml logs -f${NC}"
-    echo -e "    ${DIM}cd ${RIVARO_DEV_DIR} && docker compose -f docker-compose.yaml -f docker-compose.obfuscated.yaml down${NC}"
-    echo -e "    ${DIM}cd ${RIVARO_DEV_DIR} && docker compose -f docker-compose.yaml -f docker-compose.obfuscated.yaml down -v${NC}"
+    echo -e "    ${DIM}cd ${RIVARO_HOME} && docker compose -f docker-compose.yaml -f docker-compose.obfuscated.yaml logs -f${NC}"
+    echo -e "    ${DIM}cd ${RIVARO_HOME} && docker compose -f docker-compose.yaml -f docker-compose.obfuscated.yaml down${NC}"
+    echo -e "    ${DIM}cd ${RIVARO_HOME} && docker compose -f docker-compose.yaml -f docker-compose.obfuscated.yaml down -v${NC}"
 else
-    echo -e "    ${DIM}cd ${RIVARO_DEV_DIR} && docker compose logs -f   # stream logs${NC}"
-    echo -e "    ${DIM}cd ${RIVARO_DEV_DIR} && docker compose down      # stop${NC}"
-    echo -e "    ${DIM}cd ${RIVARO_DEV_DIR} && docker compose down -v   # reset all data${NC}"
+    echo -e "    ${DIM}cd ${RIVARO_HOME} && docker compose logs -f   # stream logs${NC}"
+    echo -e "    ${DIM}cd ${RIVARO_HOME} && docker compose down      # stop${NC}"
+    echo -e "    ${DIM}cd ${RIVARO_HOME} && docker compose down -v   # reset all data${NC}"
 fi
 echo ""
 

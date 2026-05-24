@@ -1,4 +1,6 @@
-# Rivaro for Developers
+# Rivaro — Local Install
+
+One-line installer for running Rivaro locally with Docker. Works for developers evaluating Rivaro, enterprise IT running a POC, and small teams running it in light production.
 
 Runtime governance for AI agents. Detect risks, enforce policies, and audit every decision -- transparently, with zero code changes to your agent.
 
@@ -24,34 +26,34 @@ curl -fsSL https://get.rivaro.ai | less
 curl -fsSL https://get.rivaro.ai | bash
 ```
 
-The installer source is also browsable on GitHub: [scripts/get-rivaro-dev.sh](https://github.com/rivaro-ai/ai-compliance/blob/main/scripts/get-rivaro-dev.sh).
+The installer source is also browsable on GitHub: [scripts/get-rivaro-dev.sh](https://github.com/rivaro-ai/install/blob/main/scripts/get-rivaro-dev.sh).
 
 ### Verify the obfuscated backend artifact
 
 Every release publishes a SHA256 checksum alongside the JAR:
 
 ```bash
-curl -fsSL https://github.com/rivaro-ai/ai-compliance/releases/latest/download/rivaro-backend.jar.sha256
+curl -fsSL https://github.com/rivaro-ai/install/releases/latest/download/rivaro-backend.jar.sha256
 ```
 
-The installer downloads the JAR to `~/.rivaro/developer/rivaro-backend.jar`. You can verify it manually:
+The installer downloads the JAR to `~/.rivaro/rivaro-backend.jar`. You can verify it manually:
 
 ```bash
-shasum -a 256 ~/.rivaro/developer/rivaro-backend.jar
+shasum -a 256 ~/.rivaro/rivaro-backend.jar
 ```
 
 ### What the installer touches
 
 | Path | Purpose |
 |---|---|
-| `~/.rivaro/developer/docker-compose.yaml` | Compose definition for the local stack |
-| `~/.rivaro/developer/docker-compose.obfuscated.yaml` | Override that runs the obfuscated JAR |
-| `~/.rivaro/developer/rivaro-backend.jar` | Obfuscated Rivaro backend (signed release artifact) |
-| `~/.rivaro/developer/.env` | Optional provider keys (only created if you pass `OPENAI_API_KEY` etc.) |
-| Docker containers | `rivaro-dev-backend`, `rivaro-dev-frontend`, `rivaro-dev-mysql`, `rivaro-dev-rabbitmq`, `rivaro-dev-redis` |
+| `~/.rivaro/docker-compose.yaml` | Compose definition for the local stack |
+| `~/.rivaro/docker-compose.obfuscated.yaml` | Override that runs the obfuscated JAR |
+| `~/.rivaro/rivaro-backend.jar` | Obfuscated Rivaro backend (signed release artifact) |
+| `~/.rivaro/.env` | Optional provider keys (only created if you pass `OPENAI_API_KEY` etc.) |
+| Docker containers | `rivaro-backend`, `rivaro-frontend`, `rivaro-mysql`, `rivaro-rabbitmq`, `rivaro-redis` |
 | Local ports | `127.0.0.1:8080` (proxy), `127.0.0.1:3000` (dashboard) |
 
-Nothing is installed system-wide. To remove everything, `docker compose -f ~/.rivaro/developer/docker-compose.yaml down -v && rm -rf ~/.rivaro/developer`.
+Nothing is installed system-wide. To remove everything, `docker compose -f ~/.rivaro/docker-compose.yaml down -v && rm -rf ~/.rivaro`.
 
 This starts Rivaro locally with Docker. You'll have:
 
@@ -111,7 +113,7 @@ Every request and response is scanned for:
 ## Managing Your Installation
 
 ```bash
-cd ~/.rivaro/developer
+cd ~/.rivaro
 
 docker compose logs -f         # stream logs
 docker compose down            # stop services
@@ -132,7 +134,7 @@ OPENAI_API_KEY=sk-your-key curl -fsSL https://get.rivaro.ai | bash
 The installer downloads the obfuscated backend JAR (and SHA256 checksum) from GitHub Releases:
 
 ```
-https://github.com/rivaro-ai/ai-compliance/releases/latest/download/rivaro-backend.jar
+https://github.com/rivaro-ai/install/releases/latest/download/rivaro-backend.jar
 ```
 
 Override only if you need to test a different artifact URL:
