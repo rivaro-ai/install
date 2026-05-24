@@ -1,5 +1,5 @@
 # Rivaro for Developers — Local Deployment
-# Install: curl -fsSL https://get.rivaro.ai/dev | bash
+# Install: curl -fsSL https://get.rivaro.ai | bash
 # Dashboard: http://localhost:3000
 # Proxy: http://localhost:8080
 
@@ -87,6 +87,7 @@ services:
       AWS_BEDROCK_ENABLED: ${AWS_BEDROCK_ENABLED:-false}
       SERVER_PORT: 8080
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-developer}
+      SPRING_JPA_PROPERTIES_HIBERNATE_TYPE_PREFERRED_ENUM_JDBC_TYPE: VARCHAR
       LOCAL_MODE: "true"
     ports:
       - '127.0.0.1:8080:8080'
